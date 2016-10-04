@@ -22,7 +22,7 @@ typedef struct {
   };
 } Object;
 
-Object** object_array;
+Object* object_array[128];
 int obj = 0;
 int line = 1;
 
@@ -153,8 +153,8 @@ void read_scene(char* filename) {
       // Parse the object
       char* key = next_string(json);
       if (strcmp(key, "type") != 0) {
-	fprintf(stderr, "Error: Expected \"type\" key on line number %d.\n", line);
-	exit(1);
+		fprintf(stderr, "Error: Expected \"type\" key on line number %d.\n", line);
+		exit(1);
       }
 
       skip_ws(json);
@@ -164,15 +164,17 @@ void read_scene(char* filename) {
       skip_ws(json);
 
       char* value = next_string(json);
-	  object_array = malloc(sizeof(Object*)*128);
   	  object_array[obj] = malloc(sizeof(Object));
 	  Object new;
       if (strcmp(value, "camera") == 0) {
-		new.kind = 0;
+		(*object_array[obj]).kind = 0;
+		printf("Found camera\n");
       } else if (strcmp(value, "sphere") == 0) {
-		new.kind = 1;
+		(*object_array[obj]).kind = 1;
+		printf("Found sphere\n");
       } else if (strcmp(value, "plane") == 0) {
-		new.kind = 2;
+		(*object_array[obj]).kind = 2;
+		printf("Found plane\n");
       } else {
 		fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
 		exit(1);
@@ -181,64 +183,63 @@ void read_scene(char* filename) {
       skip_ws(json);
 
       while (1) {
-	// , }
-	c = next_c(json);
-	if (c == '}') {
-	  // stop parsing this object
-	  object_array[obj] = &new;
-	  obj++;
-	  break;
-	} else if (c == ',') {
-	  // read another field
-	  skip_ws(json);
-	  char* key = next_string(json);
-	  skip_ws(json);
-	  expect_c(json, ':');
-	  skip_ws(json);
-	// double options///////////////////////////////////////////
-	  if ((strcmp(key, "width") == 0) ||
+		c = next_c(json);
+		if (c == '}') {
+	  	// stop parsing this object
+	  		//object_array[obj] = &new;
+			obj++;
+	  		break;
+	  } else if (c == ',') {
+	  	// read another field
+		  skip_ws(json);
+		  char* key = next_string(json);
+		  skip_ws(json);
+		  expect_c(json, ':');
+		  skip_ws(json);
+		// double options///////////////////////////////////////////
+	  	if ((strcmp(key, "width") == 0) ||
 	      (strcmp(key, "height") == 0) ||
 	      (strcmp(key, "radius") == 0)) {
-	    double value = next_number(json);
-		if(strcmp(key, "width") == 0){
-			if(new.kind == 0) new.camera.width = value;
-		}
-		else if(strcmp(key, "height") == 0){
-			if(new.kind == 0) new.camera.height = value;
-		}
-		else if(strcmp(key, "radius") == 0){
-			new.sphere.radius = value;
-		}
-	///////////////////////////////////////////////////////////
-	// vector options//////////////////////////////////////////
-	  } else if ((strcmp(key, "color") == 0) ||
+	    	double value = next_number(json);
+			if(strcmp(key, "width") == 0){
+				if((*object_array[obj]).kind == 0) (*object_array[obj]).camera.width = value;
+			}
+			else if(strcmp(key, "height") == 0){
+				if((*object_array[obj]).kind == 0) (*object_array[obj]).camera.height = value;
+			}
+			else if(strcmp(key, "radius") == 0){
+				(*object_array[obj]).sphere.radius = value;
+			}
+		///////////////////////////////////////////////////////////
+		// vector options//////////////////////////////////////////
+	  	} else if ((strcmp(key, "color") == 0) ||
 		     (strcmp(key, "position") == 0) ||
 		     (strcmp(key, "normal") == 0)) {
-	    double* value = next_vector(json);
-		if(strcmp(key, "color") == 0){
-				new.color[0] = value[0];
-				new.color[1] = value[1];
-				new.color[2] = value[2];
-		}
-		else if(strcmp(key, "position") == 0){
-			if(new.kind == 1){
-				new.sphere.position[0] = value[0];
-				new.sphere.position[1] = value[1];
-				new.sphere.position[2] = value[2];
+	    	double* value = next_vector(json);
+			if(strcmp(key, "color") == 0){
+				(*object_array[obj]).color[0] = value[0];
+				(*object_array[obj]).color[1] = value[1];
+				(*object_array[obj]).color[2] = value[2];
 			}
-			else if(new.kind == 2){
-				new.plane.position[0] = value[0];
-				new.plane.position[1] = value[1];
-				new.plane.position[2] = value[2];
+			else if(strcmp(key, "position") == 0){
+				if((*object_array[obj]).kind == 1){
+					(*object_array[obj]).sphere.position[0] = value[0];
+					(*object_array[obj]).sphere.position[1] = value[1];
+					(*object_array[obj]).sphere.position[2] = value[2];
+				}
+				else if((*object_array[obj]).kind == 2){
+					(*object_array[obj]).plane.position[0] = value[0];
+					(*object_array[obj]).plane.position[1] = value[1];
+					(*object_array[obj]).plane.position[2] = value[2];
+				}
 			}
-		}
-		else if(strcmp(key, "normal") == 0){
-			new.plane.normal[0] = value[0];
-			new.plane.normal[1] = value[1];
-			new.plane.normal[2] = value[2];
-		}
-	////////////////////////////////////////////////////////////
-	// error ///////////////////////////////////////////////////
+			else if(strcmp(key, "normal") == 0){
+				(*object_array[obj]).plane.normal[0] = value[0];
+				(*object_array[obj]).plane.normal[1] = value[1];
+				(*object_array[obj]).plane.normal[2] = value[2];
+			}
+		////////////////////////////////////////////////////////////
+		// error ///////////////////////////////////////////////////
 	  } else {
 	    fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n",
 		    key, line);
@@ -267,10 +268,10 @@ void read_scene(char* filename) {
   }
 }
 
-/* attempt at printing object info
+// attempt at printing object info
 void print_objects(){
-	printf("%c\n", object_array[0]->kind);
-}*/
+	printf("%i\n", object_array[0]->kind);
+}
 
 int main(int c, char** argv) {
   read_scene(argv[1]);
