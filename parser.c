@@ -1,7 +1,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
+typedef struct {
+  int kind; // 0 = camera, 1 = sphere, 2 = plane
+  double color[3];
+  union {
+    struct {
+      double width;
+      double height;
+    } camera;
+    struct {
+      double position[3];
+      double radius;
+    } sphere;
+    struct {
+      double position[3];
+      double normal[3];
+    } plane;
+  };
+} Object;
+
+Object** object_array;
+int obj = 0;
 int line = 1;
 
 // next_c() wraps the getc() function and provides error checking and line
@@ -76,7 +98,7 @@ char* next_string(FILE* json) {
 
 double next_number(FILE* json) {
   double value;
-  fscanf(json, "%f", &value);
+  fscanf(json, "%lf", &value);
   // Error check this..
   return value;
 }
@@ -142,13 +164,18 @@ void read_scene(char* filename) {
       skip_ws(json);
 
       char* value = next_string(json);
-
+	  object_array = malloc(sizeof(Object*)*128);
+  	  object_array[obj] = malloc(sizeof(Object));
+	  Object new;
       if (strcmp(value, "camera") == 0) {
+		new.kind = 0;
       } else if (strcmp(value, "sphere") == 0) {
+		new.kind = 1;
       } else if (strcmp(value, "plane") == 0) {
+		new.kind = 2;
       } else {
-	fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
-	exit(1);
+		fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
+		exit(1);
       }
 
       skip_ws(json);
@@ -158,6 +185,8 @@ void read_scene(char* filename) {
 	c = next_c(json);
 	if (c == '}') {
 	  // stop parsing this object
+	  object_array[obj] = &new;
+	  obj++;
 	  break;
 	} else if (c == ',') {
 	  // read another field
@@ -166,14 +195,50 @@ void read_scene(char* filename) {
 	  skip_ws(json);
 	  expect_c(json, ':');
 	  skip_ws(json);
+	// double options///////////////////////////////////////////
 	  if ((strcmp(key, "width") == 0) ||
 	      (strcmp(key, "height") == 0) ||
 	      (strcmp(key, "radius") == 0)) {
 	    double value = next_number(json);
+		if(strcmp(key, "width") == 0){
+			if(new.kind == 0) new.camera.width = value;
+		}
+		else if(strcmp(key, "height") == 0){
+			if(new.kind == 0) new.camera.height = value;
+		}
+		else if(strcmp(key, "radius") == 0){
+			new.sphere.radius = value;
+		}
+	///////////////////////////////////////////////////////////
+	// vector options//////////////////////////////////////////
 	  } else if ((strcmp(key, "color") == 0) ||
 		     (strcmp(key, "position") == 0) ||
 		     (strcmp(key, "normal") == 0)) {
 	    double* value = next_vector(json);
+		if(strcmp(key, "color") == 0){
+				new.color[0] = value[0];
+				new.color[1] = value[1];
+				new.color[2] = value[2];
+		}
+		else if(strcmp(key, "position") == 0){
+			if(new.kind == 1){
+				new.sphere.position[0] = value[0];
+				new.sphere.position[1] = value[1];
+				new.sphere.position[2] = value[2];
+			}
+			else if(new.kind == 2){
+				new.plane.position[0] = value[0];
+				new.plane.position[1] = value[1];
+				new.plane.position[2] = value[2];
+			}
+		}
+		else if(strcmp(key, "normal") == 0){
+			new.plane.normal[0] = value[0];
+			new.plane.normal[1] = value[1];
+			new.plane.normal[2] = value[2];
+		}
+	////////////////////////////////////////////////////////////
+	// error ///////////////////////////////////////////////////
 	  } else {
 	    fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n",
 		    key, line);
@@ -192,6 +257,7 @@ void read_scene(char* filename) {
 	skip_ws(json);
       } else if (c == ']') {
 	fclose(json);
+	object_array[obj] = NULL;
 	return;
       } else {
 	fprintf(stderr, "Error: Expecting ',' or ']' on line %d.\n", line);
@@ -201,7 +267,13 @@ void read_scene(char* filename) {
   }
 }
 
+/* attempt at printing object info
+void print_objects(){
+	printf("%c\n", object_array[0]->kind);
+}*/
+
 int main(int c, char** argv) {
   read_scene(argv[1]);
+  print_objects();
   return 0;
 }
