@@ -354,19 +354,6 @@ double cylinder_intersection(double* Ro, double* Rd,
 double sphere_intersection(double* Ro, double* Rd,
 			     double* C, double r) {
 
-	// Step 1:
-	// x^2 + y^2 + z^2 = r^2
-	// 
-	// Step 2:
-	// (x-Cx)^2 + (y-Cy)^2 + (z-Cz)^2 = r^2
-	//
-	// Step ?:
-	// x^2 -2Cx +Cx^2 + y^2 -2Cy +Cy^2 + z^2 -2Cz +Cz^2 = r^2
-	// (Rox + tRdx)^2 + (Roy + tRdy)^2 + (Roz + tRdz)^2 = r^2 + 2Cx + 2Cy + 2Cz - Cx^2 - Cy^2 - Cz^2
-	// Rox^2 + 2RoxtRdx + tRdx^2 + Roy^2 + 2RoytRdy + tRdy^2 + Roz^2 + 2RoztRdz + tRdz^2 = r^2 + 2Cx + 2Cy + 2Cz - Cx^2 - Cy^2 - Cz^2
-	// 2RoxtRdx + tRdx^2 + 2RoytRdy + tRdy^2 + 2RoztRdz + tRdz^2 = r^2 + 2Cx + 2Cy + 2Cz - Cx^2 - Cy^2 - Cz^2 - Rox^2 - Roy^2 - Roz^2
-	// t^2(Rdx^2 + Rdy^2 + Rdz^2) + t(2RoxRdx + 2RoyRdy + 2RozRdz) - (r^2 + 2Cx + 2Cy + 2Cz - Cx^2 - Cy^2 - Cz^2 - Rox^2 - Roy^2 - Roz^2) = 0
-
 	double a = (sqr(Rd[0]) + sqr(Rd[1]) + sqr(Rd[2]));
 	double b = (2*(Ro[0]*Rd[0] - Rd[0]*C[0] + Ro[1]*Rd[1] - Rd[1]*C[1] + Ro[2]*Rd[2] - Rd[2]*C[2]));
 	double c = sqr(Ro[0]) - 2*Ro[0]*C[0] + sqr(C[0]) + Ro[1] - 2*Ro[1]*C[1] + sqr(C[1]) + sqr(Ro[2]) - 2*Ro[2]*C[2] + sqr(C[2]) - sqr(r);
@@ -389,9 +376,14 @@ double sphere_intersection(double* Ro, double* Rd,
 double plane_intersection(double* Ro, double* Rd,
 			     double* C, double* N) {
 
-	double t;
+	double subtract[3];
+	subtract[0] = C[0]-Ro[0];
+	subtract[1] = C[1]-Ro[1];
+	subtract[2] = C[2]-Ro[2];
+	double dot1 = N[0]*subtract[0] + N[1]*subtract[1] + N[2]*subtract[2];
+	double dot2 = N[0]*Rd[0] + N[1]*Rd[1] + N[2]*Rd[2];
 	
-	return -1;
+	return dot1/dot2;
 }
 
 int main(int argc, char **argv) {
@@ -428,7 +420,7 @@ int main(int argc, char **argv) {
 
 	int j = 0;
 	
-  for (int y = 0; y < M; y += 1) {
+  for (int y = M; y > 0; y--) {
     for (int x = 0; x < N; x += 1) {
       double Ro[3] = {0, 0, 0};
       // Rd = normalize(P - Ro)
