@@ -423,6 +423,11 @@ int main(int argc, char **argv) {
 
   double pixheight = h / M;
   double pixwidth = w / N;
+
+	double* color;
+
+	int j = 0;
+	
   for (int y = 0; y < M; y += 1) {
     for (int x = 0; x < N; x += 1) {
       double Ro[3] = {0, 0, 0};
@@ -433,10 +438,9 @@ int main(int argc, char **argv) {
 				1
       };
       normalize(Rd);
-
       double best_t = INFINITY;
-      for (int i=0; object_array[i] != NULL; i += 1) {
-
+      for (int i=0; object_array[i] != 0; i++) {
+				j = i;
 				//printf("in loop\n");
 				double t = 0;
 				switch(object_array[i]->kind) {
@@ -459,22 +463,21 @@ int main(int argc, char **argv) {
 	  			// Horrible error
 	  			exit(1);
 				}
-				if (t > 0 && t < best_t) best_t = t;
+				if (t > 0 && t < best_t) {
+					best_t = t;
+					color = object_array[i]->color;
+				}
 			}
 			Pixel new;
     	if (best_t > 0 && best_t != INFINITY) {
-				new.red = object_array[i]->color[0];
-				new.green = object_array[i]->color[1];
-				new.blue = object_array[i]->color[2];
+				new.red = color[0];
+				new.green = color[1];
+				new.blue = color[2];
 				fprintf(output, "%i %i %i ", new.red, new.green, new.blue);
-				//printf("#");
     	} else {
-				fprintf(output, "1 0 0 ");
-				//printf(".");
+				fprintf(output, "0 0 0 ");
     	}
-      
     }
-    //printf("\n");
   }
   fclose(output);
   return 0;
