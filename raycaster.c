@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <string.h>
 
+// OBJECT STRUCTURE THAT ALLOWS FOR ALL 3 OBJECTS
 typedef struct {
   int kind; // 0 = camera, 1 = sphere, 2 = plane
   double color[3];
@@ -23,13 +24,14 @@ typedef struct {
   };
 } Object;
 
-// creating pixel structure
+// PIXEL STRUCTURE CREATED
 typedef struct Pixel{
 	unsigned char red;
 	unsigned char green;
 	unsigned char blue;
 } Pixel;
 
+// OBJECT ARRAY TO READ FROM JSON FILE INTO
 Object* object_array[128];
 int obj = 0;
 int line = 1;
@@ -173,19 +175,20 @@ void read_scene(char* filename) {
 
       char* value = next_string(json);
   	  object_array[obj] = malloc(sizeof(Object));
-	  Object new;
+	  	Object new;
+			// IDENTIFYING OBJECT TYPES AND BUILDING OBJECT
       if (strcmp(value, "camera") == 0) {
-		(*object_array[obj]).kind = 0;
-		printf("Found camera\n");
+				(*object_array[obj]).kind = 0;
+				printf("Found camera\n");
       } else if (strcmp(value, "sphere") == 0) {
-		(*object_array[obj]).kind = 1;
-		printf("Found sphere\n");
+				(*object_array[obj]).kind = 1;
+				printf("Found sphere\n");
       } else if (strcmp(value, "plane") == 0) {
-		(*object_array[obj]).kind = 2;
-		printf("Found plane\n");
+				(*object_array[obj]).kind = 2;
+				printf("Found plane\n");
       } else {
-		fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
-		exit(1);
+				fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
+				exit(1);
       }
 
       skip_ws(json);
@@ -204,7 +207,7 @@ void read_scene(char* filename) {
 		  skip_ws(json);
 		  expect_c(json, ':');
 		  skip_ws(json);
-		// double options///////////////////////////////////////////
+			// BUILDING OBJECT DOUBLE FIELDS
 	  	if ((strcmp(key, "width") == 0) ||
 	      (strcmp(key, "height") == 0) ||
 	      (strcmp(key, "radius") == 0)) {
@@ -218,8 +221,7 @@ void read_scene(char* filename) {
 			else if(strcmp(key, "radius") == 0){
 				(*object_array[obj]).sphere.radius = value;
 			}
-		///////////////////////////////////////////////////////////
-		// vector options//////////////////////////////////////////
+			// BUILDING OBJECT VECTOR FIELDS
 	  	} else if ((strcmp(key, "color") == 0) ||
 		     (strcmp(key, "position") == 0) ||
 		     (strcmp(key, "normal") == 0)) {
@@ -246,8 +248,7 @@ void read_scene(char* filename) {
 				(*object_array[obj]).plane.normal[1] = value[1];
 				(*object_array[obj]).plane.normal[2] = value[2];
 			}
-		////////////////////////////////////////////////////////////
-		// error ///////////////////////////////////////////////////
+		// ERROR CHECK
 	  } else {
 	    fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n",
 		    key, line);
@@ -276,12 +277,13 @@ void read_scene(char* filename) {
   }
 }
 
-// Plymorphism in C
+///////////////////////////////////////////////////////////////
+// BEGINNING OF RAYCASTING FUNCTION
+///////////////////////////////////////////////////////////////
 
 static inline double sqr(double v) {
   return v*v;
 }
-
 
 static inline void normalize(double* v) {
   double len = sqrt(sqr(v[0]) + sqr(v[1]) + sqr(v[2]));
@@ -289,7 +291,6 @@ static inline void normalize(double* v) {
   v[1] /= len;
   v[2] /= len;
 }
-
 
 double cylinder_intersection(double* Ro, double* Rd,
 			     double* C, double r) {
@@ -354,6 +355,7 @@ double cylinder_intersection(double* Ro, double* Rd,
 double sphere_intersection(double* Ro, double* Rd,
 			     double* C, double r) {
 
+	// SAME IDEA AS ABOVE, BUT INCLUDING A Y COMPONENT
 	double a = (sqr(Rd[0]) + sqr(Rd[1]) + sqr(Rd[2]));
 	double b = (2*(Ro[0]*Rd[0] - Rd[0]*C[0] + Ro[1]*Rd[1] - Rd[1]*C[1] + Ro[2]*Rd[2] - Rd[2]*C[2]));
 	double c = sqr(Ro[0]) - 2*Ro[0]*C[0] + sqr(C[0]) + Ro[1] - 2*Ro[1]*C[1] + sqr(C[1]) + sqr(Ro[2]) - 2*Ro[2]*C[2] + sqr(C[2]) - sqr(r);
@@ -376,6 +378,7 @@ double sphere_intersection(double* Ro, double* Rd,
 double plane_intersection(double* Ro, double* Rd,
 			     double* C, double* N) {
 
+	// USING EQUATIONS FOUND IN THE READING
 	double subtract[3];
 	subtract[0] = C[0]-Ro[0];
 	subtract[1] = C[1]-Ro[1];
@@ -388,15 +391,20 @@ double plane_intersection(double* Ro, double* Rd,
 
 int main(int argc, char **argv) {
 
+	// OPEN FILE
 	FILE* output;
 	output = fopen(argv[4], "wb+");
+	// I SHOULD ERROR CHECK HERE FOR THE CORRECT TYPE OF OUTPUT FILE, BUT I'M OUT OF TIME
+	// WRITING HEADER INFO
 	fprintf(output, "P3\n");
 	fprintf(output, "%d %d\n%d\n", atoi(argv[1]), atoi(argv[2]), 1);
 
-  read_scene(argv[3]);
+	// READING JSON OBJECTS INTO ARRAY  
+	read_scene(argv[3]);
 	int i = 0;
 	double w;
 	double h;
+	// FINDING CAMERA TO SET WIDTH AND HEIGHT VARIABLES
 	while(1){
 		if (object_array[i]->kind == 0){
 			w = object_array[i]->camera.width;
@@ -416,11 +424,11 @@ int main(int argc, char **argv) {
   double pixheight = h / M;
   double pixwidth = w / N;
 
+	// HOLDER VARIABLE FOR CLOSEST OBJECTS COLOR
 	double* color;
-
-	int j = 0;
 	
-  for (int y = M; y > 0; y--) {
+	// DECREMENTING Y COMPONENT TO FLIP PICTURE 
+	for (int y = M; y > 0; y--) {
     for (int x = 0; x < N; x += 1) {
       double Ro[3] = {0, 0, 0};
       // Rd = normalize(P - Ro)
@@ -432,7 +440,6 @@ int main(int argc, char **argv) {
       normalize(Rd);
       double best_t = INFINITY;
       for (int i=0; object_array[i] != 0; i++) {
-				j = i;
 				//printf("in loop\n");
 				double t = 0;
 				switch(object_array[i]->kind) {
@@ -440,13 +447,13 @@ int main(int argc, char **argv) {
 	  			// pass, its a camera
 	  			break;
 				case 1:
-					//printf("sphere int..\n");
+					// CHECK INTERSECTION FOR SPHERE
 	  			t = sphere_intersection(Ro, Rd,
 				    	object_array[i]->sphere.position,
 				    	object_array[i]->sphere.radius);
 	  			break;
 				case 2:
-					//printf("plane int..\n");
+					// CHECK INTERSECTION FOR PLANE
 	  			t = plane_intersection(Ro, Rd,
 				    	object_array[i]->plane.position,
 				    	object_array[i]->plane.normal);
@@ -457,16 +464,21 @@ int main(int argc, char **argv) {
 				}
 				if (t > 0 && t < best_t) {
 					best_t = t;
+					// SET COLOR TO CLOSEST OBJECTS COLOR
 					color = object_array[i]->color;
 				}
 			}
+			// CREATING A PIXEL
 			Pixel new;
     	if (best_t > 0 && best_t != INFINITY) {
+				// SETTING PIXELS COLOR TO CLOSEST OBJECTS COLOR
 				new.red = color[0];
 				new.green = color[1];
 				new.blue = color[2];
+				// WRITING TO FILE IMMEDIATELY
 				fprintf(output, "%i %i %i ", new.red, new.green, new.blue);
     	} else {
+				// OTHERWISE ITS AN EMPTY PIXEL, DEFAULT BLACK
 				fprintf(output, "0 0 0 ");
     	}
     }
