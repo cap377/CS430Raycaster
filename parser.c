@@ -168,13 +168,13 @@ void read_scene(char* filename) {
 	  Object new;
       if (strcmp(value, "camera") == 0) {
 		(*object_array[obj]).kind = 0;
-		printf("Found camera\n");
+		//printf("Found camera\n");
       } else if (strcmp(value, "sphere") == 0) {
 		(*object_array[obj]).kind = 1;
-		printf("Found sphere\n");
+		//printf("Found sphere\n");
       } else if (strcmp(value, "plane") == 0) {
 		(*object_array[obj]).kind = 2;
-		printf("Found plane\n");
+		//printf("Found plane\n");
       } else {
 		fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
 		exit(1);
@@ -273,8 +273,8 @@ void print_objects(){
 	printf("%i\n", object_array[0]->kind);
 }
 
-int main(int c, char** argv) {
-  read_scene(argv[1]);
-  print_objects();
-  return 0;
+Object** main(char* file) {
+  read_scene(file);
+  //print_objects();
+  return object_array;
 }
